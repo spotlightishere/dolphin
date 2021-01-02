@@ -318,11 +318,17 @@ bool JitArm64::HandleFastmemFault(uintptr_t access_address, SContext* ctx)
 
   ARM64XEmitter emitter((u8*)fault_location);
 
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(false);
+  #endif
   emitter.BL(slow_handler_iter->second.slowmem_code);
 
   const u32 num_insts_max = fastmem_area_length / 4 - 1;
   for (u32 i = 0; i < num_insts_max; ++i)
     emitter.NOP();
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(true);
+  #endif
 
   m_fault_to_handler.erase(slow_handler_iter);
 

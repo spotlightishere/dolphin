@@ -48,7 +48,7 @@ typedef CONTEXT SContext;
 
 #include <mach/mach.h>
 #include <mach/message.h>
-#if _M_X86_64
+#if defined(_M_X86_64)
 typedef x86_thread_state64_t SContext;
 #define CTX_RAX __rax
 #define CTX_RBX __rbx
@@ -67,6 +67,12 @@ typedef x86_thread_state64_t SContext;
 #define CTX_R14 __r14
 #define CTX_R15 __r15
 #define CTX_RIP __rip
+#elif defined(_M_ARM_64)
+typedef arm_thread_state64_t SContext;
+#define CTX_REG(x) __x[x]
+#define CTX_LR __x[30]
+#define CTX_SP __sp
+#define CTX_PC __pc
 #else
 #error No context definition for architecture
 #endif

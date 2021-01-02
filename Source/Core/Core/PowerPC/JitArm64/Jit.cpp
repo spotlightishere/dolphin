@@ -73,14 +73,6 @@ void JitArm64::Init()
 
 bool JitArm64::HandleFault(uintptr_t access_address, SContext* ctx)
 {
-  // We can't handle any fault from other threads.
-  if (!Core::IsCPUThread())
-  {
-    ERROR_LOG_FMT(DYNA_REC, "Exception handler - Not on CPU thread");
-    DoBacktrace(access_address, ctx);
-    return false;
-  }
-
   bool success = false;
 
   // Handle BLR stack faults, may happen in C++ code.
@@ -605,9 +597,15 @@ void JitArm64::Jit(u32)
     return;
   }
 
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(false);
+  #endif
   JitBlock* b = blocks.AllocateBlock(em_address);
   DoJit(em_address, b, nextPC);
   blocks.FinalizeBlock(*b, jo.enableBlocklink, code_block.m_physical_addresses);
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(true);
+  #endif
 }
 
 void JitArm64::DoJit(u32 em_address, JitBlock* b, u32 nextPC)

@@ -8,12 +8,19 @@
 #include <string>
 #include <thread>
 
+#ifndef __APPLE__
 #ifndef _WIN32
 #ifndef __FreeBSD__
 #include <asm/hwcap.h>
 #endif
+
 #include <sys/auxv.h>
 #include <unistd.h>
+#endif
+#endif
+
+#ifdef __APPLE__
+#include <sys/sysctl.h>
 #endif
 
 #include <fmt/format.h>
@@ -23,6 +30,7 @@
 #include "Common/FileUtil.h"
 
 #ifndef WIN32
+#ifndef __APPLE__
 
 const char procfile[] = "/proc/cpuinfo";
 
@@ -51,6 +59,7 @@ static std::string GetCPUString()
 }
 
 #endif
+#endif
 
 CPUInfo cpu_info;
 
@@ -70,7 +79,7 @@ void CPUInfo::Detect()
   Mode64bit = true;
   vendor = CPUVendor::ARM;
 
-#ifdef _WIN32
+#if _WIN32
   num_cores = std::thread::hardware_concurrency();
 
   // Windows does not provide any mechanism for querying the system registers on ARMv8, unlike Linux
@@ -84,6 +93,38 @@ void CPUInfo::Detect()
   bCRC32 = true;
   bSHA1 = true;
   bSHA2 = true;
+#elif __APPLE__
+  // Under Apple devices, it's documented that feature support will be in sysctls.
+  // Not everything we require is actually there, however.
+  int value;
+  size_t size = sizeof(value);
+  if (sysctlbyname("hw.optional.floatingpoint", &value, &size, NULL, 0) == 0) {
+    bFP = value;
+  }
+
+  // All known supported ARM Macs have these features enabled.
+  bASIMD = true;
+  bAES = true;
+  bSHA1 = true;
+  bSHA1 = true;
+
+  int crc32;
+  if (sysctlbyname("hw.optional.armv8_crc32", &value, &size, NULL, 0) == 0) {
+    bCRC32 = value;
+  }
+
+  // We defer to using syscalls for CPU information as well.
+  size = sizeof(num_cores);
+  if (sysctlbyname("hw.logicalcpu_max", &num_cores, &size, NULL, 0) == 0) {
+    num_cores = value;
+  }
+
+  std::string result;
+  size_t len;
+  sysctlbyname("machdep.cpu.brand_string", nullptr, &len, NULL, 0);
+  result.resize(len);
+  sysctlbyname("machdep.cpu.brand_string", result.data(), &len, NULL, 0);
+  strncpy(cpu_string, result.c_str(), sizeof(cpu_string));
 #else
   // Get the information about the CPU
   num_cores = sysconf(_SC_NPROCESSORS_CONF);

@@ -41,7 +41,13 @@ VertexLoaderARM64::VertexLoaderARM64(const TVtxDesc& vtx_desc, const VAT& vtx_at
 
   AllocCodeSpace(4096);
   ClearCodeSpace();
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(false);
+  #endif
   GenerateVertexLoader();
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(false);
+  #endif
   WriteProtect();
 }
 

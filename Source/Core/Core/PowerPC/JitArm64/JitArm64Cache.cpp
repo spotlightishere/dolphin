@@ -16,6 +16,9 @@ JitArm64BlockCache::JitArm64BlockCache(JitBase& jit) : JitBaseBlockCache{jit}
 void JitArm64BlockCache::WriteLinkBlock(Arm64Gen::ARM64XEmitter& emit,
                                         const JitBlock::LinkData& source, const JitBlock* dest)
 {
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(false);
+  #endif
   if (!dest)
   {
     // Use a fixed amount of instructions, so we can assume to use 3 instructions on patching.
@@ -55,6 +58,9 @@ void JitArm64BlockCache::WriteLinkBlock(Arm64Gen::ARM64XEmitter& emit,
   emit.B(dest->checkedEntry);
   emit.SetJumpTarget(fast_link);
   emit.B(dest->normalEntry);
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(true);
+  #endif
 }
 
 void JitArm64BlockCache::WriteLinkBlock(const JitBlock::LinkData& source, const JitBlock* dest)
@@ -72,8 +78,14 @@ void JitArm64BlockCache::WriteDestroyBlock(const JitBlock& block)
   // Only clear the entry points as we might still be within this block.
   ARM64XEmitter emit(block.checkedEntry);
 
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(false);
+  #endif
   while (emit.GetWritableCodePtr() <= block.normalEntry)
     emit.BRK(0x123);
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(true);
+  #endif
 
   emit.FlushIcache();
 }

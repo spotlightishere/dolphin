@@ -13,6 +13,10 @@
 #include "Common/CodeBlock.h"
 #include "Common/Common.h"
 
+#ifdef __APPLE__
+#include <pthread.h>
+#endif
+
 namespace Arm64Gen
 {
 // X30 serves a dual purpose as a link register
@@ -1137,10 +1141,16 @@ private:
     // AArch64: 0xD4200000 = BRK 0
     constexpr u32 brk_0 = 0xD4200000;
 
+    #ifdef __APPLE__
+    pthread_jit_write_protect_np(false);
+    #endif
     for (size_t i = 0; i < region_size; i += sizeof(u32))
     {
       std::memcpy(region + i, &brk_0, sizeof(u32));
     }
+    #ifdef __APPLE__
+    pthread_jit_write_protect_np(true);
+    #endif
   }
 };
 }  // namespace Arm64Gen

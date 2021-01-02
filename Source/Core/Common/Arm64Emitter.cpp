@@ -21,6 +21,11 @@
 #include <Windows.h>
 #endif
 
+#ifdef __APPLE__
+#import <pthread.h>
+#import <libkern/OSCacheControl.h>
+#endif
+
 namespace Arm64Gen
 {
 namespace
@@ -342,7 +347,7 @@ void ARM64XEmitter::FlushIcacheSection(u8* start, u8* end)
   if (start == end)
     return;
 
-#if defined(IOS)
+#if defined(__APPLE__)
   // Header file says this is equivalent to: sys_icache_invalidate(start, end - start);
   sys_cache_control(kCacheFunctionPrepareForExecution, start, end - start);
 #elif defined(WIN32)

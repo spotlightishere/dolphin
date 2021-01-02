@@ -15,6 +15,10 @@
 #include "Core/PowerPC/MMU.h"
 #include "Core/PowerPC/PowerPC.h"
 
+#ifdef __APPLE__
+#include <pthread.h>
+#endif
+
 using namespace Arm64Gen;
 
 void JitArm64::GenerateAsm()
@@ -27,6 +31,9 @@ void JitArm64::GenerateAsm()
   BitSet32 regs_to_save_fpr(ALL_CALLEE_SAVED_FPR);
   enter_code = GetCodePtr();
 
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(false);
+  #endif
   ABI_PushRegisters(regs_to_save);
   m_float_emit.ABI_PushRegisters(regs_to_save_fpr, X30);
 
@@ -188,6 +195,9 @@ void JitArm64::GenerateAsm()
   JitRegister::Register(enter_code, GetCodePtr(), "JIT_Dispatcher");
 
   GenerateCommonAsm();
+  #ifdef __APPLE__
+  pthread_jit_write_protect_np(true);
+  #endif
 
   FlushIcache();
 }
